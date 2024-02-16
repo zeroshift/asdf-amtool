@@ -42,7 +42,7 @@ get_arch() {
 		return
 	fi
 
-	echo $machine
+	echo "$machine"
 }
 
 get_platform() {
