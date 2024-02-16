@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-# TODO: Ensure this is the correct GitHub homepage where releases can be downloaded for amtool.
 GH_REPO="https://github.com/prometheus/alertmanager"
 TOOL_NAME="amtool"
 TOOL_TEST="amtool --version"
@@ -31,9 +30,36 @@ list_github_tags() {
 }
 
 list_all_versions() {
-	# TODO: Adapt this. By default we simply list the tag names from GitHub releases.
-	# Change this function if amtool has other means of determining installable versions.
-	list_github_tags
+	list_github_tags | grep '^[0-9]\+[.][0-9]\+[.][0-9]'
+}
+
+get_arch() {
+	local machine
+	machine=$(uname -m)
+
+	if [[ "$machine" =~ "x86_64" ]]; then
+		echo "amd64"
+		return
+	fi
+
+	echo $machine
+}
+
+get_platform() {
+	local uname
+	uname=$(uname)
+
+	if [[ "$uname" =~ "Darwin" ]]; then
+		echo "darwin"
+		return
+	fi
+
+	if [[ "$uname" =~ "Linux" ]]; then
+		echo "linux"
+		return
+	fi
+
+	fail "Unknown platform"
 }
 
 download_release() {
@@ -41,8 +67,7 @@ download_release() {
 	version="$1"
 	filename="$2"
 
-	# TODO: Adapt the release URL convention for amtool
-	url="$GH_REPO/archive/v${version}.tar.gz"
+	url="$GH_REPO/releases/download/v${version}/alertmanager-${version}.$(get_platform)-$(get_arch).tar.gz"
 
 	echo "* Downloading $TOOL_NAME release $version..."
 	curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
@@ -59,9 +84,8 @@ install_version() {
 
 	(
 		mkdir -p "$install_path"
-		cp -r "$ASDF_DOWNLOAD_PATH"/* "$install_path"
+		cp -r "$ASDF_DOWNLOAD_PATH/$TOOL_NAME" "$install_path"
 
-		# TODO: Assert amtool executable exists.
 		local tool_cmd
 		tool_cmd="$(echo "$TOOL_TEST" | cut -d' ' -f1)"
 		test -x "$install_path/$tool_cmd" || fail "Expected $install_path/$tool_cmd to be executable."
